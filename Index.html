@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Jogo QI - João Victor</title>
+  <style>
+    :root{
+      --bg1:#aee3ff; --bg2:#f7e9c1; --card:#fff; --accent:#ffcf45; --text:#3b2f20;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;font-family:Inter,Arial,sans-serif;background:linear-gradient(180deg,var(--bg1),var(--bg2));-webkit-font-smoothing:antialiased}
+    /* Sky / decorative */
+    .sky{position:fixed;inset:0;pointer-events:none;z-index:0}
+    .cloud{position:absolute;border-radius:50%;background:rgba(255,255,255,0.9);filter:blur(6px)}
+    .c1{width:260px;height:80px;left:-300px;top:40px;animation:cloudMove 48s linear infinite}
+    .c2{width:180px;height:60px;left:-320px;top:130px;animation:cloudMove 60s linear infinite}
+    .c3{width:220px;height:70px;left:-380px;top:220px;animation:cloudMove 72s linear infinite}
+    @keyframes cloudMove{0%{transform:translateX(0)}100%{transform:translateX(1900px)}}
+    /* Sun */
+    #sun{position:fixed;right:30px;top:30px;width:110px;height:110px;border-radius:50%;background:radial-gradient(circle,#fff59d,#ffd54f 40%,#fbc02d);box-shadow:0 0 80px rgba(255,200,0,0.7);animation:spin 14s linear infinite;z-index:1}
+    @keyframes spin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+    /* Header */
+    header{position:relative;z-index:2;display:flex;align-items:center;justify-content:space-between;padding:18px 22px}
+    .rgb-name{font-weight:900;font-size:28px;background:linear-gradient(90deg,red,orange,yellow,green,cyan,blue,magenta,red);background-size:300% 300%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:rgbShift 5s linear infinite;letter-spacing:2px}
+    @keyframes rgbShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+    .controls{display:flex;gap:10px}
+    .btn{background:var(--accent);border:0;padding:8px 12px;border-radius:10px;font-weight:800;cursor:pointer;box-shadow:0 6px 0 rgba(211,165,52,0.9)}
+    /* Layout */
+    main{display:flex;gap:20px;align-items:flex-start;padding:12px;max-width:1100px;margin:0 auto;position:relative;z-index:2}
+    .game-card{flex:1;background:var(--card);border-radius:18px;padding:22px;border:3px solid #e2c27b;box-shadow:0 20px 40px rgba(0,0,0,0.12);position:relative;overflow:visible;min-height:360px}
+    .sidebar{width:320px;background:linear-gradient(180deg,#fffaf0,#fffef6);padding:18px;border-radius:14px;border:2px solid #f0d0a0;box-shadow:0 8px 20px rgba(0,0,0,0.06)}
+    #question{font-size:24px;font-weight:900;color:var(--text);margin-bottom:18px}
+    .answers{display:flex;flex-direction:column;gap:12px}
+    .answerBtn{background:#fff;padding:14px;border-radius:12px;border:2px solid #ffe3a6;font-weight:900;font-size:18px;cursor:pointer;box-shadow:0 8px 0 rgba(0,0,0,0.06);transition:transform .12s}
+    .answerBtn:hover{transform:translateY(-4px)}
+    .answerBtn.correct{border-color:#67d26f}
+    .answerBtn.wrong{border-color:#ff6b6b}
+    #feedback{position:absolute;top:12px;left:50%;transform:translateX(-50%);font-size:68px;opacity:0;transition:opacity .3s,transform .3s;pointer-events:none}
+    .progress{height:12px;background:#fff6cc;border-radius:10px;overflow:hidden;border:1px solid #f0d0a0;margin-top:6px}
+    .bar{height:100%;background:linear-gradient(90deg,#ffd27a,#ffcf45);width:0%}
+    footer{position:fixed;left:0;right:0;bottom:8px;text-align:center;color:#6a5b44;z-index:2}
+    /* confetti canvas covers card */
+    #confetti{position:absolute;inset:0;pointer-events:none;z-index:30}
+    /* small screens */
+    @media(max-width:980px){main{flex-direction:column}.sidebar{width:100%}}
+  </style>
+</head>
+<body>
+  <!-- decorative sky -->
+  <div class="sky" aria-hidden="true">
+    <div class="cloud c1"></div>
+    <div class="cloud c2"></div>
+    <div class="cloud c3"></div>
+  </div>
+  <div id="sun" aria-hidden="true"></div>
+
+  <header>
+    <div class="rgb-name">JOÃO VICTOR</div>
+    <div class="controls">
+      <button class="btn" id="musicToggle">Música: ON</button>
+      <button class="btn" id="sfxToggle">Sons: ON</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="game-card" aria-live="polite">
+      <div id="feedback">✔</div>
+      <div id="question">Carregando...</div>
+      <div class="answers" id="answers"></div>
+      <canvas id="confetti"></canvas>
+    </section>
+
+    <aside class="sidebar" aria-hidden="false">
+      <div class="level">Nível <span id="levelNum">0</span> / <span id="totalNum">0</span></div>
+      <div class="progress"><div class="bar" id="bar"></div></div>
+      <div class="meta" style="margin-top:10px;font-weight:800;color:#6a5b44">
+        Dicas: <span id="hints">3</span><br>
+        Moedas: <span id="coins">0</span><br>
+        Pontos: <span id="score">0</span>
+      </div>
+      <div style="margin-top:12px;display:flex;gap:8px">
+        <button class="btn" id="hintBtn">Usar Dica</button>
+        <button class="btn" id="restart">Reiniciar</button>
+      </div>
+    </aside>
+  </main>
+
+  <footer>Feito por você — estilo Brain Test. Toque o botão de música para alternar.</footer>
+
+  <script>
+/* ===========================
+   Puzzles: mistura de handcraft + gerador (2000)
+   =========================== */
+const handcrafted = [
+  {q:'O que tem chaves mas não abre portas?', a:['Piano','Carro','Casa'], c:0},
+  {q:'Se 3 camisas custam R$30, quanto custa 1?', a:['R$10','R$30','R$15'], c:0},
+  {q:'Se você tem 2 maçãs e come 1, quantas restam?', a:['1','2','0'], c:0},
+  {q:'O que sobe e nunca desce?', a:['Idade','Balão','Escada'], c:0},
+  {q:'Qual objeto não pode ser lavado com água?', a:['Sabão','Esponja','Vaso'], c:0},
+  {q:'Complete: 1,2,3,_,5 -> qual o número?', a:['4','6','7'], c:0},
+  {q:'Qual desses é animal?', a:['Cavalo','Mesa','Maçã'], c:0},
+  {q:'Se 2+2=4, então 2x2 = ?', a:['4','22','0'], c:0},
+  {q:'Qual palavra está escrita incorretamente no dicionário?', a:['Incorretamente','Dicionário','Palavra'], c:0},
+  {q:'O que tem boca mas não come?', a:['Rio','Pessoa','Cachorro'], c:0}
+];
+
+function shuffle(arr){ return arr.sort(()=>Math.random()-0.5) }
+function rand(a,b){ return Math.floor(Math.random()*(b-a+1))+a }
+
+/* generator simples para criar até 2000 puzzles combinando tipos */
+function generatePuzzles(n){
+  const out = [];
+  // add handcrafted first
+  for(const p of handcrafted) out.push({question:p.q, answers:shuffle(p.a.slice()), correct:p.c});
+  // fill the rest with generated ones
+  const ops = ['+','-','x'];
+  while(out.length < n){
+    const t = rand(0,5);
+    if(t===0){
+      // soma simples com pegadinha de opções
+      const a=rand(1,50), b=rand(1,50);
+      const correct = (a+b).toString();
+      const choices = shuffle([correct, (a+b+rand(1,6)).toString(), Math.max(1,(a+b-rand(1,6))).toString()]);
+      out.push({question:`Quanto é ${a} + ${b}?`, answers:choices, correct:choices.indexOf(correct)});
+    } else if(t===1){
+      // qual é maior
+      const arr=[rand(1,99), rand(1,99), rand(1,99)];
+      const max = Math.max(...arr);
+      out.push({question:`Qual é o maior número?`, answers:arr.map(String), correct:arr.indexOf(max)});
+    } else if(t===2){
+      // riddle simples
+      const r = rand(0,2);
+      if(r===0) out.push({question:`Se você tem duas maçãs e come uma, quantas restam?`, answers:['1','2','0'], correct:0});
+      else if(r===1) out.push({question:`O que sobe e nunca desce?`, answers:['Idade','Balão','Carro'], correct:0});
+      else out.push({question:`Qual desses é um animal?`, answers:['Maçã','Cavalo','Mesa'], correct:1});
+    } else if(t===3){
+      // operação mista
+      const a=rand(1,12), b=rand(1,12), op=ops[rand(0,ops.length-1)];
+      let val;
+      if(op==='+') val=a+b; else if(op==='-') val=a-b; else val=a*b;
+      const choices = shuffle([String(val), String(Math.max(0,val+rand(1,4))), String(Math.max(0,val-rand(1,3)))]);
+      out.push({question:`Calcule: ${a} ${op} ${b}`, answers:choices, correct:choices.indexOf(String(val))});
+    } else {
+      // palavra/pegadinha
+      const r = rand(0,2);
+      if(r===0) out.push({question:`Qual palavra está escrita incorretamente no dicionário?`, answers:['Incorretamente','Dicionario','Palavra'], correct:0});
+      else if(r===1) out.push({question:`O que tem boca mas não come?`, answers:['Rio','Pessoa','Cachorro'], correct:0});
+      else out.push({question:`Se 5-3 = ?`, answers:['2','3','1'], correct:0});
+    }
+  }
+  return out.slice(0,n);
+}
+
+/* ===========================
+   Game state + UI
+   =========================== */
+const TOTAL = 2000;
+const puzzles = generatePuzzles(TOTAL);
+let level = 0, score = 0, hints = 3, coins = 0;
+const qEl = document.getElementById('question');
+const answersEl = document.getElementById('answers');
+const levelNum = document.getElementById('levelNum');
+const totalNum = document.getElementById('totalNum'); totalNum.innerText = TOTAL;
+const bar = document.getElementById('bar');
+const scoreEl = document.getElementById('score');
+const hintsEl = document.getElementById('hints');
+const coinsEl = document.getElementById('coins');
+const feedbackEl = document.getElementById('feedback');
+const confCanvas = document.getElementById('confetti');
+const confCtx = confCanvas.getContext('2d');
+function resizeCanvas(){ confCanvas.width = confCanvas.clientWidth; confCanvas.height = confCanvas.clientHeight; }
+window.addEventListener('resize', resizeCanvas); resizeCanvas();
+
+/* render */
+function render(){
+  const p = puzzles[level];
+  levelNum.innerText = (level+1);
+  qEl.innerText = p.question;
+  answersEl.innerHTML = '';
+  p.answers.forEach((a,i)=>{
+    const btn = document.createElement('button');
+    btn.className = 'answerBtn';
+    btn.innerText = a;
+    btn.addEventListener('click', ()=> select(i, btn));
+    answersEl.appendChild(btn);
+  });
+  bar.style.width = `${(level+1)/TOTAL*100}%`;
+  scoreEl.innerText = score;
+  hintsEl.innerText = hints;
+  coinsEl.innerText = coins;
+}
+
+/* select answer */
+let sfxOn = true, musicOn = true;
+function select(i, btn){
+  const p = puzzles[level];
+  // disable all buttons briefly
+  Array.from(answersEl.children).forEach(b=>b.disabled=true);
+  if(i === p.correct){
+    btn.classList.add('correct');
+    playCorrect();
+    showFeedback(true);
+    score += 10;
+    coins += 1;
+    saveProgress();
+    confettiBurst();
+    setTimeout(()=>{ level = (level+1) % TOTAL; render(); }, 700);
+  } else {
+    btn.classList.add('wrong');
+    playWrong();
+    showFeedback(false);
+    setTimeout(()=>{ Array.from(answersEl.children).forEach(b=>b.disabled=false); }, 600);
+  }
+}
+
+/* feedback animation */
+function showFeedback(ok){
+  feedbackEl.innerText = ok ? '✔' : '✖';
+  feedbackEl.style.color = ok ? '#2ea84a' : '#ff4d4d';
+  feedbackEl.style.opacity = 1;
+  feedbackEl.style.transform = 'translateX(-50%) scale(1.05)';
+  setTimeout(()=>{ feedbackEl.style.opacity = 0; feedbackEl.style.transform = 'translateX(-50%) scale(1)'; }, 600);
+}
+
+/* hint removes one wrong answer */
+document.getElementById('hintBtn').addEventListener('click', ()=>{
+  if(hints<=0) return alert('Sem dicas sobrando');
+  const p = puzzles[level];
+  const buttons = Array.from(answersEl.children);
+  if(buttons.length<=2) return alert('Não é possível remover opções');
+  for(let i=buttons.length-1;i>=0;i--){
+    if(i!==p.correct){ buttons[i].remove(); hints--; saveProgress(); break; }
+  }
+  hintsEl.innerText = hints;
+});
+
+/* restart */
+document.getElementById('restart').addEventListener('click', ()=>{
+  if(confirm('Reiniciar progresso?')){ level=0; score=0; coins=0; hints=3; saveProgress(); render(); }
+});
+
+/* keyboard shortcuts for testing (desktop) */
+window.addEventListener('keydown', e=>{
+  if(e.key==='ArrowRight'){ level = (level+1)%TOTAL; render(); }
+  if(e.key==='ArrowLeft'){ level = (level-1+TOTAL)%TOTAL; render(); }
+});
+
+/* progress save/load */
+function saveProgress(){
+  try{
+    localStorage.setItem('bt_level', level);
+    localStorage.setItem('bt_score', score);
+    localStorage.setItem('bt_hints', hints);
+    localStorage.setItem('bt_coins', coins);
+  }catch(e){}
+}
+function loadProgress(){
+  try{
+    const lv = parseInt(localStorage.getItem('bt_level')); if(!isNaN(lv)) level=lv;
+    const sc = parseInt(localStorage.getItem('bt_score')); if(!isNaN(sc)) score=sc;
+    const hi = parseInt(localStorage.getItem('bt_hints')); if(!isNaN(hi)) hints=hi;
+    const co = parseInt(localStorage.getItem('bt_coins')); if(!isNaN(co)) coins=co;
+  }catch(e){}
+}
+loadProgress();
+
+/* confetti burst */
+function confettiBurst(){
+  const pieces = [];
+  for(let i=0;i<60;i++){ pieces.push({x:confCanvas.width/2+rand(-80,80), y:60, vx:rand(-8,8), vy:rand(-18,-6), size:rand(5,10), color:['#ffd27a','#ff9b9b','#8fe88f','#9be7ff'][rand(0,3)]})}
+  let t=0; const id = setInterval(()=>{
+    t++; confCtx.clearRect(0,0,confCanvas.width,confCanvas.height);
+    for(const p of pieces){ p.vy += 0.45; p.x += p.vx; p.y += p.vy; confCtx.fillStyle = p.color; confCtx.fillRect(p.x,p.y,p.size,p.size); }
+    if(t>90){ clearInterval(id); confCtx.clearRect(0,0,confCanvas.width,confCanvas.height); }
+  },16);
+}
+
+/* ===========================
+   Simple WebAudio: background ambient + sfx
+   - No external files required
+   =========================== */
+let audioCtx, bgGain, bgOsc1, bgOsc2;
+function initAudio(){
+  try{
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    // background gentle pad: two detuned oscillators + lowpass
+    bgGain = audioCtx.createGain(); bgGain.gain.value = 0.05;
+    const filter = audioCtx.createBiquadFilter(); filter.type='lowpass'; filter.frequency.value=800;
+    bgOsc1 = audioCtx.createOscillator(); bgOsc1.type='sine'; bgOsc1.frequency.value = 220;
+    bgOsc2 = audioCtx.createOscillator(); bgOsc2.type='sine'; bgOsc2.frequency.value = 277; // slightly detuned
+    bgOsc1.connect(bgGain); bgOsc2.connect(bgGain); bgGain.connect(filter); filter.connect(audioCtx.destination);
+    bgOsc1.start(); bgOsc2.start();
+    // slowly vary frequencies for a soft effect
+    setInterval(()=> {
+      bgOsc1.frequency.setTargetAtTime(200 + Math.random()*60, audioCtx.currentTime, 2);
+      bgOsc2.frequency.setTargetAtTime(230 + Math.random()*80, audioCtx.currentTime, 2);
+    }, 4000);
+  }catch(e){}
+}
+function toggleMusic(on){
+  musicOn = on;
+  document.getElementById('musicToggle').innerText = 'Música: ' + (on ? 'ON' : 'OFF');
+  if(on){
+    if(!audioCtx) initAudio();
+    bgGain && (bgGain.gain.setTargetAtTime(0.05, audioCtx.currentTime, 0.2));
+  } else {
+    bgGain && (bgGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.2));
+  }
+}
+/* sfx */
+function playCorrect(){
+  if(!sfxOn || !audioCtx) return;
+  const o1 = audioCtx.createOscillator(), g = audioCtx.createGain();
+  o1.type = 'sine'; o1.frequency.value = 880;
+  const o2 = audioCtx.createOscillator(); o2.type='sine'; o2.frequency.value = 1320;
+  g.gain.value = 0.08;
+  const node = audioCtx.createGain();
+  o1.connect(node); o2.connect(node); node.connect(g); g.connect(audioCtx.destination);
+  o1.start(); o2.start();
+  g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.45);
+  setTimeout(()=>{ o1.stop(); o2.stop(); }, 500);
+}
+function playWrong(){
+  if(!sfxOn || !audioCtx) return;
+  const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+  o.type = 'sawtooth'; o.frequency.value = 160;
+  g.gain.value = 0.08;
+  o.connect(g); g.connect(audioCtx.destination);
+  o.start();
+  o.frequency.setTargetAtTime(80, audioCtx.currentTime + 0.08, 0.05);
+  g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.5);
+  setTimeout(()=>{ o.stop(); }, 600);
+}
+
+/* toggles */
+document.getElementById('musicToggle').addEventListener('click', ()=>{
+  toggleMusic(!musicOn);
+});
+document.getElementById('sfxToggle').addEventListener('click', ()=>{
+  sfxOn = !sfxOn;
+  document.getElementById('sfxToggle').innerText = 'Sons: ' + (sfxOn ? 'ON' : 'OFF');
+  // ensure audio context exists for future sfx
+  if(sfxOn && !audioCtx) initAudio();
+});
+
+/* Start music automatically on first user gesture (to satisfy browsers) */
+function startAudioOnGesture(){
+  if(!audioCtx) initAudio();
+  window.removeEventListener('click', startAudioOnGesture);
+}
+window.addEventListener('click', startAudioOnGesture, {once:true});
+
+/* start rendering */
+render();
+
+/* expose simple navigation for testing */
+window.nextLevel = ()=>{ level = (level+1) % TOTAL; render(); }
+window.prevLevel = ()=>{ level = (level-1+TOTAL) % TOTAL; render(); }
+
+/* initial UI states */
+document.getElementById('musicToggle').innerText = 'Música: ON';
+document.getElementById('sfxToggle').innerText = 'Sons: ON';
+
+/* try to load and render saved progress */
+render();
+  </script>
+</body>
+</html>
